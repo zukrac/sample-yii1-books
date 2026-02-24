@@ -66,3 +66,7 @@ Session.vim
 
 /composer.lock
 /vendor
+/.idea
+/bookz1/assets/*
+/bookz1/protected/runtime/*.log
+/bookz1/protected/data/*.db

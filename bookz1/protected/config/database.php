@@ -7,8 +7,8 @@ return array(
 	/*
 	'connectionString' => 'mysql:host=localhost;dbname=testdrive',
 	'emulatePrepare' => true,
-	'username' => 'root',
-	'password' => '',
+	'username' => getenv('MYSQL_USER'),
+	'password' => getenv('MYSQL_PASSWORD'),
 	'charset' => 'utf8',
 	*/
 );
