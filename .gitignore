@@ -70,3 +70,4 @@ Session.vim
 /bookz1/assets/*
 /bookz1/protected/runtime/*.log
 /bookz1/protected/data/*.db
+/bookz1/protected/runtime/cache

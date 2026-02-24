@@ -88,6 +88,10 @@ class User extends CActiveRecord
             // Password confirmation on register
             array('password_confirm', 'compare', 'compareAttribute' => 'password', 'on' => 'register'),
             
+            // Password strength validation on register
+            array('password', 'length', 'min' => 8, 'on' => 'register', 'message' => 'Password must be at least 8 characters.'),
+            array('password', 'match', 'pattern' => '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/', 'on' => 'register', 'message' => 'Password must contain at least one uppercase letter, one lowercase letter, and one digit.'),
+            
             // Role validation
             array('role', 'in', 'range' => array('user', 'admin'), 'allowEmpty' => true),
             

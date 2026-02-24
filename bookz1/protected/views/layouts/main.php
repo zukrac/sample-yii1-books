@@ -30,18 +30,45 @@
 		<?php $this->widget('zii.widgets.CMenu',array(
 			'items'=>array(
 				array('label'=>'Home', 'url'=>array('/site/index')),
+				array('label'=>'Books', 'url'=>array('/books/index')),
+				array('label'=>'Authors', 'url'=>array('/authors/index')),
+				array('label'=>'TOP 10 Report', 'url'=>array('/report/topAuthors')),
 				array('label'=>'About', 'url'=>array('/site/page', 'view'=>'about')),
 				array('label'=>'Contact', 'url'=>array('/site/contact')),
-				array('label'=>'Login', 'url'=>array('/site/login'), 'visible'=>Yii::app()->user->isGuest),
-				array('label'=>'Logout ('.Yii::app()->user->name.')', 'url'=>array('/site/logout'), 'visible'=>!Yii::app()->user->isGuest)
+				// Guest menu items
+				array('label'=>'Login', 'url'=>array('/user/login'), 'visible'=>Yii::app()->user->isGuest),
+				array('label'=>'Register', 'url'=>array('/user/register'), 'visible'=>Yii::app()->user->isGuest),
+				// Authenticated user menu items
+				array('label'=>'Profile', 'url'=>array('/user/profile'), 'visible'=>!Yii::app()->user->isGuest),
+				array('label'=>'Logout ('.Yii::app()->user->name.')', 'url'=>array('/user/logout'), 'visible'=>!Yii::app()->user->isGuest)
 			),
 		)); ?>
 	</div><!-- mainmenu -->
+	
 	<?php if(isset($this->breadcrumbs)):?>
 		<?php $this->widget('zii.widgets.CBreadcrumbs', array(
 			'links'=>$this->breadcrumbs,
 		)); ?><!-- breadcrumbs -->
 	<?php endif?>
+
+	<!-- Flash messages -->
+	<?php if(Yii::app()->user->hasFlash('success')): ?>
+		<div class="flash-success">
+			<?php echo Yii::app()->user->getFlash('success'); ?>
+		</div>
+	<?php endif; ?>
+	
+	<?php if(Yii::app()->user->hasFlash('error')): ?>
+		<div class="flash-error">
+			<?php echo Yii::app()->user->getFlash('error'); ?>
+		</div>
+	<?php endif; ?>
+	
+	<?php if(Yii::app()->user->hasFlash('notice')): ?>
+		<div class="flash-notice">
+			<?php echo Yii::app()->user->getFlash('notice'); ?>
+		</div>
+	<?php endif; ?>
 
 	<?php echo $content; ?>
 
