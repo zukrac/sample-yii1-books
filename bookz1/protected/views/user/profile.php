@@ -120,7 +120,15 @@ $this->pageTitle = 'My Profile';
 										<td><?php echo CHtml::encode($subscription->subscribed_at); ?></td>
 										<td>
 											<i class="bi bi-phone"></i> 
-											<?php echo CHtml::encode($subscription->phone_number); ?>
+											<?php 
+											if (!empty($subscription->phone_number)) {
+												echo CHtml::encode($subscription->phone_number);
+											} elseif (!empty($subscription->user) && !empty($subscription->user->phone)) {
+												echo CHtml::encode($subscription->user->phone) . ' <small class="text-muted">(from profile)</small>';
+											} else {
+												echo '<span class="text-muted">Not set</span>';
+											}
+											?>
 										</td>
 										<td>
 											<?php echo CHtml::link(

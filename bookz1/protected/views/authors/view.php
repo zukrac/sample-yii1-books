@@ -64,6 +64,7 @@ $this->pageTitle = $author->full_name;
 					<!-- Guest Subscription Form -->
 					<p class="text-muted">Subscribe to get notified when this author releases a new book.</p>
 					<form id="guest-subscription-form" action="<?php echo Yii::app()->createUrl('subscriptions/subscribe'); ?>" method="post">
+						<input type="hidden" name="<?php echo Yii::app()->request->csrfTokenName; ?>" value="<?php echo Yii::app()->request->csrfToken; ?>">
 						<input type="hidden" name="author_id" value="<?php echo $author->id; ?>">
 						<div class="mb-3">
 							<label for="phone_number" class="form-label">Phone Number</label>
@@ -94,10 +95,26 @@ $this->pageTitle = $author->full_name;
 						); ?>
 					<?php else: ?>
 						<p class="text-muted">Get notified when this author releases a new book.</p>
-						<a href="<?php echo Yii::app()->createUrl('subscriptions/subscribe', array('author_id' => $author->id)); ?>" 
-						   class="btn btn-success w-100">
-							<i class="bi bi-bell-fill"></i> Subscribe
-						</a>
+						<form action="<?php echo Yii::app()->createUrl('subscriptions/subscribe'); ?>" method="post">
+							<input type="hidden" name="<?php echo Yii::app()->request->csrfTokenName; ?>" value="<?php echo Yii::app()->request->csrfToken; ?>">
+							<input type="hidden" name="author_id" value="<?php echo $author->id; ?>">
+							<?php $user = User::model()->findByPk(Yii::app()->user->id); ?>
+							<?php if (empty($user->phone)): ?>
+								<div class="mb-3">
+									<label for="user_phone" class="form-label">Phone Number (optional)</label>
+									<input type="tel" class="form-control" id="user_phone" name="phone_number" 
+										   placeholder="e.g., 79001234567" pattern="[0-9]{10,15}">
+									<small class="text-muted">10-15 digits for SMS notifications</small>
+								</div>
+							<?php else: ?>
+								<div class="alert alert-info py-2">
+									<small><i class="bi bi-phone"></i> Notifications will be sent to: <?php echo CHtml::encode($user->phone); ?></small>
+								</div>
+							<?php endif; ?>
+							<button type="submit" class="btn btn-success w-100">
+								<i class="bi bi-bell-fill"></i> Subscribe
+							</button>
+						</form>
 					<?php endif; ?>
 				<?php endif; ?>
 			</div>
