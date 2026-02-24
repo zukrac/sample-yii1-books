@@ -48,6 +48,7 @@ class UserController extends Controller
     /**
      * Specifies the access control rules.
      * This method is used by the 'accessControl' filter.
+     * Uses RBAC roles for authorization.
      * @return array access control rules
      */
     public function accessRules()
@@ -61,7 +62,7 @@ class UserController extends Controller
             // Allow authenticated users to logout and view profile
             array('allow',
                 'actions' => array('logout', 'profile'),
-                'users' => array('@'),
+                'roles' => array('authenticated_user'),
             ),
             // Deny all other actions
             array('deny',

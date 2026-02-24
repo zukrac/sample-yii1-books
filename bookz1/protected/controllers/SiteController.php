@@ -1,9 +1,23 @@
 <?php
 
+/**
+ * SiteController handles the main site actions.
+ * 
+ * Actions:
+ * - index: Homepage
+ * - error: Error handling
+ * - contact: Contact form
+ * - login: User login (redirects to UserController)
+ * - logout: User logout (redirects to UserController)
+ * 
+ * @package BookManagementSystem
+ * @subpackage controllers
+ */
 class SiteController extends Controller
 {
 	/**
 	 * Declares class-based actions.
+	 * @return array action configurations
 	 */
 	public function actions()
 	{
@@ -17,6 +31,46 @@ class SiteController extends Controller
 			// They can be accessed via: index.php?r=site/page&view=FileName
 			'page'=>array(
 				'class'=>'CViewAction',
+			),
+		);
+	}
+
+	/**
+	 * @return array action filters
+	 */
+	public function filters()
+	{
+		return array(
+			'accessControl', // perform access control for CRUD operations
+		);
+	}
+
+	/**
+	 * Specifies the access control rules.
+	 * This method is used by the 'accessControl' filter.
+	 * @return array access control rules
+	 */
+	public function accessRules()
+	{
+		return array(
+			// Allow all users to view index, error, contact, and page
+			array('allow',
+				'actions'=>array('index', 'error', 'contact', 'page', 'captcha'),
+				'users'=>array('*'),
+			),
+			// Allow only guests to login
+			array('allow',
+				'actions'=>array('login'),
+				'users'=>array('?'),
+			),
+			// Allow authenticated users to logout
+			array('allow',
+				'actions'=>array('logout'),
+				'users'=>array('@'),
+			),
+			// Deny all other actions
+			array('deny',
+				'users'=>array('*'),
 			),
 		);
 	}
@@ -73,37 +127,22 @@ class SiteController extends Controller
 	}
 
 	/**
-	 * Displays the login page
+	 * Displays the login page.
+	 * Redirects to UserController login action for consistency.
 	 */
 	public function actionLogin()
 	{
-		$model=new LoginForm;
-
-		// if it is ajax validation request
-		if(isset($_POST['ajax']) && $_POST['ajax']==='login-form')
-		{
-			echo CActiveForm::validate($model);
-			Yii::app()->end();
-		}
-
-		// collect user input data
-		if(isset($_POST['LoginForm']))
-		{
-			$model->attributes=$_POST['LoginForm'];
-			// validate user input and redirect to the previous page if valid
-			if($model->validate() && $model->login())
-				$this->redirect(Yii::app()->user->returnUrl);
-		}
-		// display the login form
-		$this->render('login',array('model'=>$model));
+		// Redirect to UserController login for consistency
+		$this->redirect(array('user/login'));
 	}
 
 	/**
 	 * Logs out the current user and redirect to homepage.
+	 * Redirects to UserController logout action for consistency.
 	 */
 	public function actionLogout()
 	{
-		Yii::app()->user->logout();
-		$this->redirect(Yii::app()->homeUrl);
+		// Redirect to UserController logout for consistency
+		$this->redirect(array('user/logout'));
 	}
 }

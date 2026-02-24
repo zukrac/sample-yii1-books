@@ -33,10 +33,22 @@ return array(
 	// application components
 	'components'=>array(
 
+		// enable CSRF validation for security
+		'request'=>array(
+			'enableCsrfValidation'=>true,
+			'enableCookieValidation'=>true,
+		),
+
 		'user'=>array(
 			// enable cookie-based authentication
 			'allowAutoLogin'=>true,
 			'loginUrl'=>array('user/login'),
+		),
+
+		// RBAC configuration using phpManager
+		'authManager'=>array(
+			'class'=>'application.components.PhpAuthManager',
+			'authFile'=>dirname(__FILE__).DIRECTORY_SEPARATOR.'auth.php',
 		),
 
 		// cache component for rate limiting and other caching needs
