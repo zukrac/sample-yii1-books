@@ -2,7 +2,7 @@
 ## Book Management System
 
 **Project Name:** Book Management System  
-**Technology Stack:** PHP 8+, MySQL/MariaDB, Yii Framework v1  
+**Technology Stack:** PHP 8+, MySQL/MariaDB, Yii Framework v1, Docker environment  
 **Date:** February 24, 2026
 
 ---
