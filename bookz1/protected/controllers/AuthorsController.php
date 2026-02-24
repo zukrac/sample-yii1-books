@@ -1,7 +1,7 @@
 <?php
 
 /**
- * AuthorController handles author viewing and inline creation.
+ * AuthorsController handles author viewing and inline creation.
  * 
  * Actions:
  * - index: List authors with pagination
@@ -11,7 +11,7 @@
  * @package BookManagementSystem
  * @subpackage controllers
  */
-class AuthorController extends Controller
+class AuthorsController extends Controller
 {
     /**
      * @return array action filters

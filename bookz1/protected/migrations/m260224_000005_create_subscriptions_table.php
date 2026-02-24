@@ -13,7 +13,7 @@ class m260224_000005_create_subscriptions_table extends CDbMigration
 {
     /**
      * Creates the user_subscriptions table with all required fields.
-     * Uses Yii abstract column types for database compatibility.
+     * Uses MySQL-specific options for better performance and compatibility.
      * 
      * @return void
      */
@@ -24,11 +24,10 @@ class m260224_000005_create_subscriptions_table extends CDbMigration
             'user_id' => 'integer',
             'author_id' => 'integer NOT NULL',
             'phone_number' => 'string',
-            'subscribed_at' => 'timestamp DEFAULT CURRENT_TIMESTAMP',
-        ));
+            'subscribed_at' => 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP',
+        ), 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 
-        // Create unique constraint for registered users (user_id is NOT NULL)
-        // SQLite partial index syntax for users with user_id
+        // Create index on user_id and author_id for lookups
         $this->createIndex('idx_user_subscriptions_user_author', 'user_subscriptions', 'user_id, author_id');
         
         // Create index on author_id for faster lookups
@@ -38,7 +37,6 @@ class m260224_000005_create_subscriptions_table extends CDbMigration
         $this->createIndex('idx_user_subscriptions_phone_number', 'user_subscriptions', 'phone_number');
 
         // Add foreign key constraint for user_id referencing users table
-        // Note: SQLite requires PRAGMA foreign_keys = ON; to enforce FK constraints
         $this->addForeignKey(
             'fk_user_subscriptions_user_id',
             'user_subscriptions',

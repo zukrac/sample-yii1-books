@@ -1,7 +1,7 @@
 <?php
 
 /**
- * BookController handles book CRUD operations.
+ * BooksController handles book CRUD operations.
  * 
  * Actions:
  * - index: List books with pagination and filters
@@ -13,7 +13,7 @@
  * @package BookManagementSystem
  * @subpackage controllers
  */
-class BookController extends Controller
+class BooksController extends Controller
 {
     /**
      * @return array action filters

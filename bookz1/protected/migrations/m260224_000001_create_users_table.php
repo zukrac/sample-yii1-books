@@ -12,7 +12,7 @@ class m260224_000001_create_users_table extends CDbMigration
 {
     /**
      * Creates the users table with all required fields.
-     * Uses Yii abstract column types for database compatibility.
+     * Uses MySQL-specific options for better performance and compatibility.
      * 
      * @return void
      */
@@ -20,20 +20,20 @@ class m260224_000001_create_users_table extends CDbMigration
     {
         $this->createTable('users', array(
             'id' => 'pk',
-            'username' => 'string NOT NULL UNIQUE',
+            'username' => 'string NOT NULL',
             'password_hash' => 'string NOT NULL',
-            'email' => 'string UNIQUE',
+            'email' => 'string',
             'phone' => 'string',
             'role' => 'string DEFAULT \'user\'',
-            'created_at' => 'timestamp DEFAULT CURRENT_TIMESTAMP',
-            'updated_at' => 'timestamp',
-        ));
+            'created_at' => 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP',
+            'updated_at' => 'timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP',
+        ), 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 
-        // Create index on username for faster lookups
-        $this->createIndex('idx_users_username', 'users', 'username');
+        // Create unique index on username
+        $this->createIndex('idx_users_username_unique', 'users', 'username', true);
         
-        // Create index on email for faster lookups
-        $this->createIndex('idx_users_email', 'users', 'email');
+        // Create unique index on email
+        $this->createIndex('idx_users_email_unique', 'users', 'email', true);
         
         // Create index on role for filtering
         $this->createIndex('idx_users_role', 'users', 'role');

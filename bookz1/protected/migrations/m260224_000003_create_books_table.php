@@ -13,7 +13,7 @@ class m260224_000003_create_books_table extends CDbMigration
 {
     /**
      * Creates the books table with all required fields.
-     * Uses Yii abstract column types for database compatibility.
+     * Uses MySQL-specific options for better performance and compatibility.
      * 
      * @return void
      */
@@ -21,30 +21,29 @@ class m260224_000003_create_books_table extends CDbMigration
     {
         $this->createTable('books', array(
             'id' => 'pk',
-            'title' => 'string NOT NULL UNIQUE',
+            'title' => 'string NOT NULL',
             'year_published' => 'integer NOT NULL',
             'description' => 'text',
-            'isbn' => 'string UNIQUE',
+            'isbn' => 'string',
             'cover_image' => 'string',
             'created_by' => 'integer',
-            'created_at' => 'timestamp DEFAULT CURRENT_TIMESTAMP',
-            'updated_at' => 'timestamp',
-        ));
+            'created_at' => 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP',
+            'updated_at' => 'timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP',
+        ), 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 
-        // Create index on title for searching
-        $this->createIndex('idx_books_title', 'books', 'title');
+        // Create unique index on title
+        $this->createIndex('idx_books_title_unique', 'books', 'title', true);
         
         // Create index on year_published for filtering
         $this->createIndex('idx_books_year_published', 'books', 'year_published');
         
-        // Create index on isbn for lookups
-        $this->createIndex('idx_books_isbn', 'books', 'isbn');
+        // Create unique index on isbn
+        $this->createIndex('idx_books_isbn_unique', 'books', 'isbn', true);
         
         // Create index on created_by for filtering by creator
         $this->createIndex('idx_books_created_by', 'books', 'created_by');
 
         // Add foreign key constraint for created_by referencing users table
-        // Note: SQLite requires PRAGMA foreign_keys = ON; to enforce FK constraints
         $this->addForeignKey(
             'fk_books_created_by',
             'books',

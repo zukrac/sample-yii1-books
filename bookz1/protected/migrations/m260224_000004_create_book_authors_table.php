@@ -13,7 +13,7 @@ class m260224_000004_create_book_authors_table extends CDbMigration
 {
     /**
      * Creates the book_authors junction table with all required fields.
-     * Uses Yii abstract column types for database compatibility.
+     * Uses MySQL-specific options for better performance and compatibility.
      * 
      * @return void
      */
@@ -24,7 +24,7 @@ class m260224_000004_create_book_authors_table extends CDbMigration
             'book_id' => 'integer NOT NULL',
             'author_id' => 'integer NOT NULL',
             'author_order' => 'integer DEFAULT 0',
-        ));
+        ), 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 
         // Create unique constraint to prevent duplicate book-author pairs
         $this->createIndex('unique_book_author', 'book_authors', 'book_id, author_id', true);
@@ -36,7 +36,6 @@ class m260224_000004_create_book_authors_table extends CDbMigration
         $this->createIndex('idx_book_authors_author_order', 'book_authors', 'author_order');
 
         // Add foreign key constraint for book_id referencing books table
-        // Note: SQLite requires PRAGMA foreign_keys = ON; to enforce FK constraints
         $this->addForeignKey(
             'fk_book_authors_book_id',
             'book_authors',
