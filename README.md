@@ -1,71 +1,214 @@
-Yii Web Programming Framework
-=============================
+# Book Management System
 
-Thank you for choosing Yii - a high-performance component-based PHP framework.
+A web application for managing books and authors with role-based access control, built on Yii Framework v1.
 
-[![Build Status](https://github.com/yiisoft/yii/workflows/build/badge.svg)](https://github.com/yiisoft/yii/actions)
+## Features
 
-> Note that Yii 1.1 [has reached end of life](https://www.yiiframework.com/news/90/update-on-yii-1-1-support-and-end-of-life/)
-  and will only receive necessary security fixes and fixes to adjust the code for compatibility with PHP 7 and 8 if they do not cause breaking changes.
-  This allows you to keep your servers PHP version up to date in the environments where old Yii 1.1 applications are hosted and stay within the [version ranges supported by the PHP team](https://php.net/supported-versions.php).
-> 
-> Currently tested and supported [up to PHP 8.4](https://github.com/yiisoft/yii/blob/master/.github/workflows/build.yml#L36).
+- **Book Management**: Create, read, update, and delete books with cover images
+- **Author Management**: Manage authors with biographical information
+- **Multi-Author Support**: Books can have multiple authors with ordering
+- **User Authentication**: Registration, login, and profile management
+- **Subscription System**: Subscribe to authors for new book notifications
+- **SMS Notifications**: Automatic SMS alerts via SMS Pilot when new books are added
+- **TOP 10 Authors Report**: View top authors by book count with year filtering
+- **Role-Based Access Control**: Guest and authenticated user roles
 
-INSTALLATION
-------------
+## Requirements
 
-Please make sure the release file is unpacked under a Web-accessible
-directory. You shall see the following files and directories:
+- PHP 8.0 or higher
+- MySQL/MariaDB 5.7+
+- Apache/Nginx web server with mod_rewrite enabled
+- Composer (for dependencies)
 
-      demos/               demos
-      framework/           framework source files
-      requirements/        requirement checker
-      CHANGELOG            describing changes in every Yii release
-      LICENSE              license of Yii
-      README               this file
-      UPGRADE              upgrading instructions
+![2026-02-25_03-37-38.png](/docs/images/2026-02-25_03-37-38.png)
+![2026-02-25_03-38-15.png](/docs/images/2026-02-25_03-38-15.png)
+![2026-02-25_03-38-55.png](/docs/images/2026-02-25_03-38-55.png)
+![2026-02-25_03-39-56.png](/docs/images/2026-02-25_03-39-56.png)
 
+## Installation
 
-REQUIREMENTS
-------------
+### 1. Clone or Download
 
-The minimum requirement by Yii is that your Web server supports
-PHP 5.1.0 or above. Yii has been tested with Apache HTTP server
-on Windows and Linux operating systems.
+```bash
+cd /path/to/your/web/root
+# Clone or extract the project to 'bookz1' directory
+```
 
-Please access the following URL to check if your Web server reaches
-the requirements by Yii, assuming "YiiPath" is where Yii is installed:
+### 2. Install Dependencies
 
-      http://hostname/YiiPath/requirements/index.php
+```bash
+composer install
+```
 
+### 3. Configure Environment
 
-QUICK START
------------
+Copy the example environment file and configure your settings:
 
-Yii comes with a command line tool called "yiic" that can create
-a skeleton Yii application for you to start with.
+```bash
+cp .env.example .env
+```
 
-On command line, type in the following commands:
+Edit `.env` with your configuration:
 
-        $ cd YiiPath/framework                (Linux)
-        cd YiiPath\framework                  (Windows)
+```env
+# SMS Pilot Configuration
+SMSPILOT_API_KEY=emulator          # Use 'emulator' for testing
+SMSPILOT_SENDER=BookSystem
+SMSPILOT_TEST_MODE=true
 
-        $ ./yiic webapp ../testdrive          (Linux)
-        yiic webapp ..\testdrive              (Windows)
+# Database (if using environment variables)
+# DB_HOST=localhost
+# DB_NAME=bookz1
+# DB_USER=root
+# DB_PASSWORD=
+```
 
-The new Yii application will be created at "YiiPath/testdrive".
-You can access it with the following URL:
+### 4. Configure Database
 
-        http://hostname/YiiPath/testdrive/index.php
+Edit `protected/config/database.php` with your database credentials:
 
+```php
+return array(
+    'connectionString' => 'mysql:host=localhost;dbname=bookz1',
+    'emulatePrepare' => true,
+    'username' => 'your_username',
+    'password' => 'your_password',
+    'charset' => 'utf8',
+);
+```
 
-WHAT'S NEXT
------------
+### 5. Create Database
 
-Please visit the project website for tutorials, class reference
-and join discussions with other Yii users.
+```sql
+CREATE DATABASE bookz1 CHARACTER SET utf8 COLLATE utf8_unicode_ci;
+```
 
+### 6. Run Migrations
 
+```bash
+cd bookz1
+php protected/yiic migrate
+```
 
-The Yii Developer Team
-https://www.yiiframework.com
+Apply all migrations when prompted.
+
+### 7. Set Directory Permissions
+
+Ensure the following directories are writable by the web server:
+
+```bash
+chmod -R 777 protected/runtime
+chmod -R 777 assets
+chmod -R 777 uploads/covers
+```
+
+### 8. Configure Web Server
+
+#### Apache
+
+The project includes `.htaccess` files for Apache. Ensure `mod_rewrite` is enabled:
+
+### 9. Access the Application
+
+Open your browser and navigate to:
+- Application: `http://bookz1.localhost/` (or your configured URL)
+
+## Directory Structure
+
+```
+bookz1/
+├── assets/              # Published asset files
+├── css/                 # Stylesheet files
+├── images/              # Image assets
+├── protected/           # Application core
+│   ├── commands/        # Console commands
+│   ├── components/      # Application components
+│   ├── config/          # Configuration files
+│   ├── controllers/     # Controller classes
+│   ├── migrations/      # Database migrations
+│   ├── models/          # Model classes
+│   ├── runtime/         # Runtime files (logs, cache)
+│   └── views/           # View templates
+├── themes/              # Theme templates
+├── uploads/             # User uploaded files
+│   └── covers/          # Book cover images
+├── .env.example         # Environment configuration template
+├── .htaccess            # Apache URL rewriting
+├── index.php            # Application entry point
+└── index-test.php       # Debug entry point
+```
+
+## Console Commands
+
+### Seed Data
+
+Populate the database with sample data:
+
+```bash
+# Seed all sample data (authors + books)
+php protected/yiic seed
+```
+
+### SMS Notifications
+
+```bash
+# Send notification for a specific book
+php protected/yiic bookNotification notify --bookId=123
+
+# Notify about books added in the last 24 hours
+php protected/yiic bookNotification notifyRecent --hours=24
+
+# Test SMS sending
+php protected/yiic bookNotification test --phone=79087964781
+```
+
+### Migrations
+
+```bash
+# Apply pending migrations
+php protected/yiic migrate
+```
+
+## User Roles
+
+| Role | Permissions |
+|------|-------------|
+| Guest | View books, view authors, subscribe to authors |
+| Authenticated User | All guest permissions + create/edit/delete own books |
+
+## API Routes
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/` | GET | Homepage |
+| `/books` | GET | List books with pagination and filters |
+| `/books/<id>` | GET | View book details |
+| `/books/create` | GET/POST | Create new book (auth required) |
+| `/books/update/<id>` | GET/POST | Edit book (owner only) |
+| `/books/delete/<id>` | POST | Delete book (owner only) |
+| `/authors` | GET | List authors with pagination |
+| `/authors/<id>` | GET | View author details |
+| `/user/login` | GET/POST | User login |
+| `/user/register` | GET/POST | User registration |
+| `/user/logout` | GET | User logout |
+| `/user/profile` | GET | User profile with subscriptions |
+| `/report/topAuthors` | GET | TOP 10 authors report |
+
+## SMS Integration
+
+The system uses SMS Pilot for sending notifications. Configure your API key in `.env`:
+
+- **Testing**: Use `SMSPILOT_API_KEY=emulator` to test without sending real SMS
+- **Production**: Get your API key from [SMS Pilot](https://smspilot.ru/apikey.php)
+
+### Notification Flow
+
+1. User subscribes to an author
+2. When a new book is added by that author
+3. SMS notification is sent to all subscribers
+4. Notification includes book title and author name
+
+## Credits
+
+- Built with [Yii Framework 1.1](https://www.yiiframework.com/)
+- SMS integration by [SMS Pilot](https://smspilot.ru/)
