@@ -211,13 +211,10 @@ php protected/yiic seed refresh
 ```
 
 ### 8.1 TOP 10 Authors Report
-- [ ] Implement SQL query for TOP 10 authors by book count
-- [ ] Add year filter functionality
-- [ ] Display rank, author name, book count, total books, latest book
-- [ ] Add clickable author links
-
-### 8.2 Report Enhancements (Nice-to-have)
-- [ ] Add chart visualization
+- [x] Implement SQL query for TOP 10 authors by book count
+- [x] Add year filter functionality
+- [x] Display rank, author name, book count, total books, latest book
+- [x] Add clickable author links
 
 ---
 

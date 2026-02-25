@@ -75,3 +75,4 @@ Session.vim
 # Environment files (contain secrets)
 /bookz1/.env
 .env
+/.agents/.obsidian
