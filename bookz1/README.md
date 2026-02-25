@@ -20,6 +20,11 @@ A web application for managing books and authors with role-based access control,
 - Apache/Nginx web server with mod_rewrite enabled
 - Composer (for dependencies)
 
+![2026-02-25_03-37-38.png](../docs/images/2026-02-25_03-37-38.png)
+![2026-02-25_03-38-15.png](../docs/images/2026-02-25_03-38-15.png)
+![2026-02-25_03-38-55.png](../docs/images/2026-02-25_03-38-55.png)
+![2026-02-25_03-39-56.png](../docs/images/2026-02-25_03-39-56.png)
+
 ## Installation
 
 ### 1. Clone or Download
