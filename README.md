@@ -24,6 +24,7 @@ A web application for managing books and authors with role-based access control,
 ![2026-02-25_03-38-15.png](/docs/images/2026-02-25_03-38-15.png)
 ![2026-02-25_03-38-55.png](/docs/images/2026-02-25_03-38-55.png)
 ![2026-02-25_03-39-56.png](/docs/images/2026-02-25_03-39-56.png)
+![2026-02-25_04-12-23.png](/docs/images/2026-02-25_04-12-23.png)
 
 ## Installation
 
