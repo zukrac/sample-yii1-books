@@ -161,24 +161,54 @@
 ## Phase 7: SMS Notification System
 
 ### 7.1 SMS Service Component
-- [ ] Create `SmsPilotService.php` component
-- [ ] Implement `send($phone, $message)` method
-- [ ] Configure API key and test mode (emulator)
-- [ ] Add error handling and logging
+- [x] Create `SmsPilotService.php` component
+- [x] Implement `send($phone, $message)` method
+- [x] Configure API key and test mode (emulator)
+- [x] Add error handling and logging
 
 ### 7.2 Notification Triggers
-- [ ] Integrate SMS notification on book creation
-- [ ] Get all subscribers for book's authors
-- [ ] Send notifications to all subscribers
-- [ ] Log notification results
+- [x] Integrate SMS notification on book creation
+- [x] Get all subscribers for book's authors
+- [x] Send notifications to all subscribers
+- [x] Log notification results
 
 ### 7.3 Console Command (Optional)
-- [ ] Create console command for scheduled notifications
+- [x] Create console command for scheduled notifications
 - [ ] Configure cron job for batch processing
+
+```php
+// In code - send SMS
+Yii::app()->smsPilot->send('79087964781', 'Hello!');
+
+// Console commands
+./yiic bookNotification notify --bookId=123
+./yiic bookNotification notifyRecent --hours=24
+./yiic bookNotification test --phone=79087964781
+```
 
 ---
 
 ## Phase 8: Reporting
+
+```php
+# From the bookz1 directory
+cd bookz1
+
+# Seed all sample data (authors + books)
+php protected/yiic seed
+
+# Seed only authors
+php protected/yiic seed authors
+
+# Seed only books (requires authors to exist)
+php protected/yiic seed books
+
+# Clear all seeded data
+php protected/yiic seed clear
+
+# Clear and re-seed (fresh start)
+php protected/yiic seed refresh
+```
 
 ### 8.1 TOP 10 Authors Report
 - [ ] Implement SQL query for TOP 10 authors by book count
@@ -187,7 +217,6 @@
 - [ ] Add clickable author links
 
 ### 8.2 Report Enhancements (Nice-to-have)
-- [ ] Add PDF export functionality
 - [ ] Add chart visualization
 
 ---

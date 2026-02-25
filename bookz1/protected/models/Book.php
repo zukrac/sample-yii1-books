@@ -218,9 +218,12 @@ class Book extends CActiveRecord
     protected function beforeSave()
     {
         if (parent::beforeSave()) {
-            // Set created_by for new records
-            if ($this->isNewRecord && $this->created_by === null && !Yii::app()->user->isGuest) {
-                $this->created_by = Yii::app()->user->id;
+            // Set created_by for new records (only in web application with user component)
+            if ($this->isNewRecord && $this->created_by === null) {
+                // Check if user component exists (not available in console apps)
+                if (Yii::app()->hasComponent('user') && !Yii::app()->user->isGuest) {
+                    $this->created_by = Yii::app()->user->id;
+                }
             }
             
             return true;

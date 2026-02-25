@@ -9,6 +9,12 @@ return array(
 	// preloading 'log' component
 	'preload'=>array('log'),
 
+	// autoloading model and component classes
+	'import'=>array(
+		'application.models.*',
+		'application.components.*',
+	),
+
 	// application components
 	'components'=>array(
 
@@ -24,6 +30,9 @@ return array(
 				),
 			),
 		),
+
+		// SMS Pilot service for notifications (configuration loaded from separate file)
+		'smsPilot' => require(dirname(__FILE__) . '/sms.php'),
 
 	),
 );

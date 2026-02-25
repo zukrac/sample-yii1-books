@@ -91,6 +91,8 @@ return array(
 			),
 		),
 
+		// SMS Pilot service for notifications (configuration loaded from separate file)
+		'smsPilot' => require(dirname(__FILE__) . '/sms.php'),
 	),
 
 	// application-level parameters that can be accessed

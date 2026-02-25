@@ -71,3 +71,7 @@ Session.vim
 /bookz1/protected/runtime/*.log
 /bookz1/protected/data/*.db
 /bookz1/protected/runtime/cache
+
+# Environment files (contain secrets)
+/bookz1/.env
+.env

@@ -172,6 +172,9 @@ class BooksController extends Controller
                     $this->saveBookAuthors($book->id, $_POST['Book']['authorIds']);
                 }
 
+                // Send SMS notifications to subscribers
+                $this->sendNewBookNotifications($book);
+
                 Yii::app()->user->setFlash('success', 'Book "' . $book->title . '" has been created successfully.');
                 $this->redirect(array('view', 'id' => $book->id));
             }
@@ -347,6 +350,73 @@ class BooksController extends Controller
             $bookAuthor->author_id = (int)$authorId;
             $bookAuthor->author_order = $order++;
             $bookAuthor->save();
+        }
+    }
+
+    /**
+     * Send SMS notifications to subscribers when a new book is created.
+     * @param Book $book the newly created book
+     */
+    protected function sendNewBookNotifications($book)
+    {
+        try {
+            // Reload book with authors to ensure we have the relationships
+            $book = Book::model()->with('authors')->findByPk($book->id);
+            
+            if (empty($book->authors)) {
+                Yii::log("No authors found for book ID {$book->id}, skipping SMS notifications", CLogger::LEVEL_INFO, 'application.controllers.BooksController');
+                return;
+            }
+
+            // Collect all unique phone numbers from subscribers of all book authors
+            $phones = array();
+            $authorNames = array();
+            $subscription = new UserSubscription();
+            
+            foreach ($book->authors as $author) {
+                $authorNames[] = $author->full_name;
+                
+                // Get subscriber phones for this author
+                $authorPhones = $subscription->getAuthorSubscriberPhones($author->id);
+                $phones = array_merge($phones, $authorPhones);
+            }
+
+            // Remove duplicates
+            $phones = array_unique($phones);
+
+            if (empty($phones)) {
+                Yii::log("No subscribers found for book ID {$book->id} authors, skipping SMS notifications", CLogger::LEVEL_INFO, 'application.controllers.BooksController');
+                return;
+            }
+
+            // Format author names
+            $authorNamesStr = implode(', ', $authorNames);
+
+            // Send notifications via SMS Pilot
+            $result = Yii::app()->smsPilot->sendNewBookNotification(
+                $phones,
+                $book->title,
+                $authorNamesStr,
+                $book->isbn
+            );
+
+            // Log results
+            if ($result['sent'] > 0) {
+                Yii::log("SMS notifications sent for new book '{$book->title}': {$result['sent']} successful, {$result['failed']} failed", 
+                         CLogger::LEVEL_INFO, 'application.controllers.BooksController');
+            }
+            
+            if (!empty($result['errors'])) {
+                foreach ($result['errors'] as $error) {
+                    Yii::log("SMS notification error for phone {$error['phone']}: {$error['error']}", 
+                             CLogger::LEVEL_WARNING, 'application.controllers.BooksController');
+                }
+            }
+
+        } catch (Exception $e) {
+            // Log error but don't interrupt the book creation flow
+            Yii::log("Failed to send SMS notifications for book ID {$book->id}: " . $e->getMessage(), 
+                     CLogger::LEVEL_ERROR, 'application.controllers.BooksController');
         }
     }
 }
