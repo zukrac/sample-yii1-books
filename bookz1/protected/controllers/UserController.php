@@ -9,6 +9,7 @@
  * - register: User registration
  * - profile: User profile with subscriptions
  */
+Yii::import('application.components.services.RateLimitService');
 class UserController extends Controller
 {
     /**
@@ -79,14 +80,12 @@ class UserController extends Controller
     public function actionLogin()
     {
         // Check if user is currently locked out
+        $rateLimitService = new RateLimitService();
         $ip = Yii::app()->request->userHostAddress;
-        $cacheKey = 'login_attempts_' . $ip;
-        $attempts = Yii::app()->cache->get($cacheKey);
         
-        if ($attempts !== false && $attempts >= self::MAX_LOGIN_ATTEMPTS) {
-            $ttl = Yii::app()->cache->get($cacheKey . '_time');
-            $remainingTime = $ttl ? max(0, $ttl - time()) : self::LOCKOUT_DURATION;
-            Yii::app()->user->setFlash('error', 'Too many failed login attempts. Please try again in ' . ceil($remainingTime / 60) . ' minutes.');
+        if ($rateLimitService->isLockedOut($ip)) {
+            $remainingTime = $rateLimitService->getFormattedRemainingTime($ip);
+            Yii::app()->user->setFlash('error', 'Too many failed login attempts. Please try again in ' . $remainingTime . '.');
             $this->render('login', array('model' => new LoginForm));
             return;
         }
@@ -105,18 +104,16 @@ class UserController extends Controller
             // Validate user input and redirect to the previous page if valid
             if ($model->validate() && $model->login()) {
                 // Clear failed attempts on successful login
-                Yii::app()->cache->delete($cacheKey);
-                Yii::app()->cache->delete($cacheKey . '_time');
+                $rateLimitService->clearFailedAttempts($ip);
                 Yii::app()->user->setFlash('success', 'You have been successfully logged in.');
                 $this->redirect(Yii::app()->user->returnUrl);
             } else {
-                // Increment failed attempts
-                $newAttempts = $attempts === false ? 1 : $attempts + 1;
-                Yii::app()->cache->set($cacheKey, $newAttempts, self::LOCKOUT_DURATION);
-                Yii::app()->cache->set($cacheKey . '_time', time() + self::LOCKOUT_DURATION, self::LOCKOUT_DURATION);
+                // Record failed attempt
+                $newAttempts = $rateLimitService->recordFailedAttempt($ip);
                 
-                if ($newAttempts >= self::MAX_LOGIN_ATTEMPTS) {
-                    Yii::app()->user->setFlash('error', 'Too many failed login attempts. Please try again in ' . ceil(self::LOCKOUT_DURATION / 60) . ' minutes.');
+                if ($newAttempts >= RateLimitService::MAX_LOGIN_ATTEMPTS) {
+                    $remainingTime = $rateLimitService->getFormattedRemainingTime($ip);
+                    Yii::app()->user->setFlash('error', 'Too many failed login attempts. Please try again in ' . $remainingTime . '.');
                 }
             }
         }

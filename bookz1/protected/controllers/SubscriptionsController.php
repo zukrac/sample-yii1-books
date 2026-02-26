@@ -10,6 +10,7 @@
  * @package BookManagementSystem
  * @subpackage controllers
  */
+Yii::import('application.components.services.SubscriptionService');
 class SubscriptionsController extends Controller
 {
     /**
@@ -83,85 +84,30 @@ class SubscriptionsController extends Controller
             throw new CHttpException(404, 'The requested author does not exist.');
         }
 
-        // Handle guest subscription
+        // Use subscription service
+        $subscriptionService = new SubscriptionService();
+        
         if (Yii::app()->user->isGuest) {
-            $this->handleGuestSubscription($author);
+            $phoneNumber = trim(Yii::app()->request->getPost('phone_number', ''));
+            $result = $subscriptionService->subscribeGuest($phoneNumber, $authorId);
+            
+            if ($result['success']) {
+                Yii::app()->user->setFlash('success', 'You have successfully subscribed to ' . CHtml::encode($author->full_name) . '! You will receive SMS notifications when new books are released.');
+            } else {
+                Yii::app()->user->setFlash('error', $result['error']);
+            }
         } else {
-            $this->handleUserSubscription($author);
-        }
-    }
-
-    /**
-     * Handle subscription for guest users.
-     * @param Author $author The author to subscribe to
-     */
-    private function handleGuestSubscription($author)
-    {
-        $phoneNumber = trim(Yii::app()->request->getPost('phone_number', ''));
-        
-        // Validate phone number format (10-15 digits)
-        if (!preg_match('/^\d{10,15}$/', $phoneNumber)) {
-            Yii::app()->user->setFlash('error', 'Please enter a valid phone number (10-15 digits, no spaces or dashes).');
-            $this->redirect(array('authors/view', 'id' => $author->id));
+            $phoneNumber = trim(Yii::app()->request->getPost('phone_number', ''));
+            $result = $subscriptionService->subscribeUser(Yii::app()->user->id, $authorId, $phoneNumber);
+            
+            if ($result['success']) {
+                Yii::app()->user->setFlash('success', 'You have successfully subscribed to ' . CHtml::encode($author->full_name) . '! You will receive SMS notifications when new books are released.');
+            } else {
+                Yii::app()->user->setFlash('error', $result['error']);
+            }
         }
 
-        // Check if already subscribed
-        if (UserSubscription::model()->isPhoneSubscribed($phoneNumber, $author->id)) {
-            Yii::app()->user->setFlash('info', 'This phone number is already subscribed to ' . CHtml::encode($author->full_name) . '.');
-            $this->redirect(array('authors/view', 'id' => $author->id));
-        }
-
-        // Create subscription
-        $subscription = UserSubscription::model()->subscribeGuest($phoneNumber, $author->id);
-        
-        if ($subscription !== false) {
-            Yii::app()->user->setFlash('success', 'You have successfully subscribed to ' . CHtml::encode($author->full_name) . '! You will receive SMS notifications when new books are released.');
-        } else {
-            Yii::app()->user->setFlash('error', 'Failed to create subscription. Please try again.');
-        }
-
-        $this->redirect(array('authors/view', 'id' => $author->id));
-    }
-
-    /**
-     * Handle subscription for authenticated users.
-     * @param Author $author The author to subscribe to
-     */
-    private function handleUserSubscription($author)
-    {
-        $userId = Yii::app()->user->id;
-        $user = User::model()->findByPk($userId);
-        
-        // Check if already subscribed
-        if (UserSubscription::model()->isUserSubscribed($userId, $author->id)) {
-            Yii::app()->user->setFlash('info', 'You are already subscribed to ' . CHtml::encode($author->full_name) . '.');
-            $this->redirect(array('authors/view', 'id' => $author->id));
-        }
-
-        // Get phone number from POST or user profile
-        $phoneNumber = trim(Yii::app()->request->getPost('phone_number', ''));
-        
-        // If no phone provided in POST, use user's profile phone
-        if (empty($phoneNumber) && !empty($user->phone)) {
-            $phoneNumber = $user->phone;
-        }
-
-        // Validate phone number if provided
-        if (!empty($phoneNumber) && !preg_match('/^\d{10,15}$/', $phoneNumber)) {
-            Yii::app()->user->setFlash('error', 'Please enter a valid phone number (10-15 digits).');
-            $this->redirect(array('authors/view', 'id' => $author->id));
-        }
-
-        // Create subscription
-        $subscription = UserSubscription::model()->subscribeUser($userId, $author->id, $phoneNumber);
-        
-        if ($subscription !== false) {
-            Yii::app()->user->setFlash('success', 'You have successfully subscribed to ' . CHtml::encode($author->full_name) . '! You will receive SMS notifications when new books are released.');
-        } else {
-            Yii::app()->user->setFlash('error', 'Failed to create subscription. Please try again.');
-        }
-
-        $this->redirect(array('authors/view', 'id' => $author->id));
+        $this->redirect(array('authors/view', 'id' => $authorId));
     }
 
     /**
@@ -171,7 +117,8 @@ class SubscriptionsController extends Controller
      */
     public function actionUnsubscribe($id)
     {
-        $subscription = UserSubscription::model()->findByPk($id);
+        $subscriptionService = new SubscriptionService();
+        $subscription = $subscriptionService->getSubscription($id);
         
         if ($subscription === null) {
             throw new CHttpException(404, 'The requested subscription does not exist.');
@@ -185,10 +132,12 @@ class SubscriptionsController extends Controller
         $authorName = $subscription->author->full_name;
         $authorId = $subscription->author_id;
 
-        if ($subscription->delete()) {
+        $result = $subscriptionService->unsubscribe($id, Yii::app()->user->id);
+        
+        if ($result['success']) {
             Yii::app()->user->setFlash('success', 'You have been unsubscribed from ' . CHtml::encode($authorName) . '.');
         } else {
-            Yii::app()->user->setFlash('error', 'Failed to unsubscribe. Please try again.');
+            Yii::app()->user->setFlash('error', $result['error']);
         }
 
         // Redirect back to where user came from
@@ -217,6 +166,8 @@ class SubscriptionsController extends Controller
             Yii::app()->end();
         }
 
+        $subscriptionService = new SubscriptionService();
+        
         $result = array(
             'success' => true,
             'isSubscribed' => false,
@@ -224,19 +175,9 @@ class SubscriptionsController extends Controller
         );
 
         if (!Yii::app()->user->isGuest) {
-            $subscription = UserSubscription::model()->findByAttributes(array(
-                'user_id' => Yii::app()->user->id,
-                'author_id' => $authorId,
-            ));
-            
-            if ($subscription !== null) {
-                $result['isSubscribed'] = true;
-                $result['subscription'] = array(
-                    'id' => $subscription->id,
-                    'subscribed_at' => $subscription->subscribed_at,
-                    'phone_number' => $subscription->phone_number,
-                );
-            }
+            $status = $subscriptionService->getSubscriptionStatus($authorId, Yii::app()->user->id);
+            $result['isSubscribed'] = $status['isSubscribed'];
+            $result['subscription'] = $status['subscription'];
         }
 
         echo CJSON::encode($result);

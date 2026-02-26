@@ -67,27 +67,8 @@ class ReportController extends Controller
             $years = array($selectedYear);
         }
 
-        // Build the query for TOP 10 authors
-        $sql = "
-            SELECT 
-                a.id,
-                a.full_name,
-                COUNT(DISTINCT CASE WHEN b.year_published = :year THEN b.id END) as books_in_year,
-                COUNT(DISTINCT b.id) as total_books,
-                MAX(CASE WHEN b.year_published = :year THEN b.title END) as latest_book,
-                MAX(CASE WHEN b.year_published = :year THEN b.year_published END) as latest_book_year
-            FROM authors a
-            LEFT JOIN book_authors ba ON a.id = ba.author_id
-            LEFT JOIN books b ON ba.book_id = b.id
-            GROUP BY a.id, a.full_name
-            HAVING books_in_year > 0
-            ORDER BY books_in_year DESC, total_books DESC
-            LIMIT 10
-        ";
-
-        $command = Yii::app()->db->createCommand($sql);
-        $command->bindValue(':year', $selectedYear);
-        $authors = $command->queryAll();
+        // Get TOP 10 authors using model method
+        $authors = Author::model()->getTopAuthorsByYear($selectedYear);
 
         $this->render('topAuthors', array(
             'authors' => $authors,

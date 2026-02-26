@@ -13,6 +13,9 @@
  * @package BookManagementSystem
  * @subpackage controllers
  */
+Yii::import('application.components.services.BookManagementService');
+Yii::import('application.components.services.FileUploadService');
+Yii::import('application.components.services.NotificationService');
 class BooksController extends Controller
 {
     /**
@@ -64,46 +67,20 @@ class BooksController extends Controller
      */
     public function actionIndex()
     {
-        $criteria = new CDbCriteria(array(
-            'with' => array('authors'),
-            'order' => 't.created_at DESC',
-        ));
+        $filters = array(
+            'author_id' => isset($_GET['author_id']) && !empty($_GET['author_id']) ? (int)$_GET['author_id'] : null,
+            'year' => isset($_GET['year']) && !empty($_GET['year']) ? (int)$_GET['year'] : null,
+            'search' => isset($_GET['search']) && !empty($_GET['search']) ? trim($_GET['search']) : null,
+        );
 
-        // Filter by author
-        if (isset($_GET['author_id']) && !empty($_GET['author_id'])) {
-            $criteria->addCondition('authors.id = :authorId');
-            $criteria->params[':authorId'] = (int)$_GET['author_id'];
-        }
-
-        // Filter by year
-        if (isset($_GET['year']) && !empty($_GET['year'])) {
-            $criteria->addCondition('t.year_published = :year');
-            $criteria->params[':year'] = (int)$_GET['year'];
-        }
-
-        // Search by title or ISBN
-        if (isset($_GET['search']) && !empty($_GET['search'])) {
-            $search = trim($_GET['search']);
-            $criteria->addCondition('t.title LIKE :search OR t.isbn LIKE :search');
-            $criteria->params[':search'] = '%' . $search . '%';
-        }
-
-        $dataProvider = new CActiveDataProvider('Book', array(
-            'criteria' => $criteria,
-            'pagination' => array(
-                'pageSize' => 20,
-            ),
-        ));
+        $bookService = new BookManagementService();
+        $dataProvider = $bookService->getBooksWithFilters($filters);
 
         // Get all authors for filter dropdown
-        $authors = Author::model()->findAll(array('order' => 'full_name ASC'));
+        $authors = $bookService->getAllAuthors();
 
         // Get distinct years for filter dropdown
-        $years = Yii::app()->db->createCommand()
-            ->selectDistinct('year_published')
-            ->from('books')
-            ->order('year_published DESC')
-            ->queryColumn();
+        $years = $bookService->getAvailableYears();
 
         $this->render('index', array(
             'dataProvider' => $dataProvider,
@@ -123,7 +100,7 @@ class BooksController extends Controller
 
         $this->render('view', array(
             'book' => $book,
-            'isOwner' => $this->isBookOwner($book),
+            'isOwner' => $book->canModify(Yii::app()->user->id),
         ));
     }
 
@@ -140,41 +117,21 @@ class BooksController extends Controller
 
         if (isset($_POST['Book'])) {
             $book->attributes = $_POST['Book'];
-            $book->created_by = Yii::app()->user->id;
 
-            // Handle cover image upload with security validation
+            // Handle cover image upload
             $coverImage = CUploadedFile::getInstance($book, 'cover_image');
-            if ($coverImage !== null) {
-                // Validate file type - only allow image files
-                $allowedExtensions = array('jpg', 'jpeg', 'png', 'gif', 'webp');
-                $allowedMimeTypes = array('image/jpeg', 'image/png', 'image/gif', 'image/webp');
-                $extension = strtolower($coverImage->extensionName);
-                
-                if (!in_array($extension, $allowedExtensions)) {
-                    $book->addError('cover_image', 'Only image files (JPG, PNG, GIF, WEBP) are allowed.');
-                } elseif (!in_array($coverImage->type, $allowedMimeTypes)) {
-                    $book->addError('cover_image', 'Invalid file type. Only image files are allowed.');
-                } elseif (@getimagesize($coverImage->tempName) === false) {
-                    // Validate actual image content to prevent MIME spoofing
-                    $book->addError('cover_image', 'File is not a valid image.');
-                } else {
-                    $fileName = 'book_' . time() . '_' . uniqid() . '.' . $extension;
-                    $uploadPath = Yii::getPathOfAlias('webroot.uploads.covers') . DIRECTORY_SEPARATOR . $fileName;
-                    if ($coverImage->saveAs($uploadPath)) {
-                        $book->cover_image = '/uploads/covers/' . $fileName;
-                    }
-                }
-            }
+            
+            $bookService = new BookManagementService();
+            $authorIds = isset($_POST['Book']['authorIds']) ? $_POST['Book']['authorIds'] : array();
+            
+            $result = $bookService->createBook(
+                $book, 
+                $authorIds, 
+                $coverImage, 
+                Yii::app()->user->id
+            );
 
-            if ($book->save()) {
-                // Save book-author relationships
-                if (isset($_POST['Book']['authorIds']) && is_array($_POST['Book']['authorIds'])) {
-                    $this->saveBookAuthors($book->id, $_POST['Book']['authorIds']);
-                }
-
-                // Send SMS notifications to subscribers
-                $this->sendNewBookNotifications($book);
-
+            if ($result['success']) {
                 Yii::app()->user->setFlash('success', 'Book "' . $book->title . '" has been created successfully.');
                 $this->redirect(array('view', 'id' => $book->id));
             }
@@ -199,7 +156,8 @@ class BooksController extends Controller
         $book = $this->loadModel($id);
 
         // Check ownership - only owner or admin can edit
-        if (!$this->isBookOwner($book) && !Yii::app()->user->checkAccess('admin')) {
+        $bookService = new BookManagementService();
+        if (!$bookService->canModify($book, Yii::app()->user->id) && !Yii::app()->user->checkAccess('admin')) {
             throw new CHttpException(403, 'You are not authorized to edit this book.');
         }
 
@@ -209,45 +167,14 @@ class BooksController extends Controller
         if (isset($_POST['Book'])) {
             $book->attributes = $_POST['Book'];
 
-            // Handle cover image upload with security validation
+            // Handle cover image upload
             $coverImage = CUploadedFile::getInstance($book, 'cover_image');
-            if ($coverImage !== null) {
-                // Validate file type - only allow image files
-                $allowedExtensions = array('jpg', 'jpeg', 'png', 'gif', 'webp');
-                $allowedMimeTypes = array('image/jpeg', 'image/png', 'image/gif', 'image/webp');
-                $extension = strtolower($coverImage->extensionName);
-                
-                if (!in_array($extension, $allowedExtensions)) {
-                    $book->addError('cover_image', 'Only image files (JPG, PNG, GIF, WEBP) are allowed.');
-                } elseif (!in_array($coverImage->type, $allowedMimeTypes)) {
-                    $book->addError('cover_image', 'Invalid file type. Only image files are allowed.');
-                } elseif (@getimagesize($coverImage->tempName) === false) {
-                    // Validate actual image content to prevent MIME spoofing
-                    $book->addError('cover_image', 'File is not a valid image.');
-                } else {
-                    $fileName = 'book_' . time() . '_' . uniqid() . '.' . $extension;
-                    $uploadPath = Yii::getPathOfAlias('webroot.uploads.covers') . DIRECTORY_SEPARATOR . $fileName;
-                    if ($coverImage->saveAs($uploadPath)) {
-                        // Delete old cover AFTER successful upload (avoid race condition)
-                        $oldCover = $book->cover_image;
-                        $book->cover_image = '/uploads/covers/' . $fileName;
-                        if (!empty($oldCover)) {
-                            $oldCoverPath = Yii::getPathOfAlias('webroot') . $oldCover;
-                            if (file_exists($oldCoverPath) && !@unlink($oldCoverPath)) {
-                                Yii::log("Failed to delete old cover image: $oldCoverPath", CLogger::LEVEL_WARNING);
-                            }
-                        }
-                    }
-                }
-            }
+            
+            $authorIds = isset($_POST['Book']['authorIds']) ? $_POST['Book']['authorIds'] : null;
+            
+            $result = $bookService->updateBook($book, $authorIds, $coverImage);
 
-            if ($book->save()) {
-                // Update book-author relationships
-                BookAuthor::model()->deleteAllByAttributes(array('book_id' => $book->id));
-                if (isset($_POST['Book']['authorIds']) && is_array($_POST['Book']['authorIds'])) {
-                    $this->saveBookAuthors($book->id, $_POST['Book']['authorIds']);
-                }
-
+            if ($result['success']) {
                 Yii::app()->user->setFlash('success', 'Book "' . $book->title . '" has been updated successfully.');
                 $this->redirect(array('view', 'id' => $book->id));
             }
@@ -275,21 +202,14 @@ class BooksController extends Controller
         $book = $this->loadModel($id);
 
         // Check ownership - only owner or admin can delete
-        if (!$this->isBookOwner($book) && !Yii::app()->user->checkAccess('admin')) {
+        $bookService = new BookManagementService();
+        if (!$bookService->canModify($book, Yii::app()->user->id) && !Yii::app()->user->checkAccess('admin')) {
             throw new CHttpException(403, 'You are not authorized to delete this book.');
         }
 
         $title = $book->title;
 
-        // Delete cover image if exists
-        if (!empty($book->cover_image)) {
-            $coverPath = Yii::getPathOfAlias('webroot') . $book->cover_image;
-            if (file_exists($coverPath) && !@unlink($coverPath)) {
-                Yii::log("Failed to delete cover image: $coverPath", CLogger::LEVEL_WARNING);
-            }
-        }
-
-        $book->delete();
+        $bookService->deleteBook($book);
 
         // if AJAX request (triggered by deletion via admin grid view), we should not redirect the browser
         if (!isset($_GET['ajax'])) {
@@ -323,100 +243,6 @@ class BooksController extends Controller
         if (isset($_POST['ajax']) && $_POST['ajax'] === 'book-form') {
             echo CActiveForm::validate($model);
             Yii::app()->end();
-        }
-    }
-
-    /**
-     * Check if current user is the owner of the book.
-     * @param Book $book the book model
-     * @return boolean whether the current user is the owner
-     */
-    protected function isBookOwner($book)
-    {
-        return !Yii::app()->user->isGuest && (int)Yii::app()->user->id === (int)$book->created_by;
-    }
-
-    /**
-     * Save book-author relationships.
-     * @param integer $bookId the book ID
-     * @param array $authorIds array of author IDs
-     */
-    protected function saveBookAuthors($bookId, $authorIds)
-    {
-        $order = 0;
-        foreach ($authorIds as $authorId) {
-            $bookAuthor = new BookAuthor();
-            $bookAuthor->book_id = $bookId;
-            $bookAuthor->author_id = (int)$authorId;
-            $bookAuthor->author_order = $order++;
-            $bookAuthor->save();
-        }
-    }
-
-    /**
-     * Send SMS notifications to subscribers when a new book is created.
-     * @param Book $book the newly created book
-     */
-    protected function sendNewBookNotifications($book)
-    {
-        try {
-            // Reload book with authors to ensure we have the relationships
-            $book = Book::model()->with('authors')->findByPk($book->id);
-            
-            if (empty($book->authors)) {
-                Yii::log("No authors found for book ID {$book->id}, skipping SMS notifications", CLogger::LEVEL_INFO, 'application.controllers.BooksController');
-                return;
-            }
-
-            // Collect all unique phone numbers from subscribers of all book authors
-            $phones = array();
-            $authorNames = array();
-            $subscription = new UserSubscription();
-            
-            foreach ($book->authors as $author) {
-                $authorNames[] = $author->full_name;
-                
-                // Get subscriber phones for this author
-                $authorPhones = $subscription->getAuthorSubscriberPhones($author->id);
-                $phones = array_merge($phones, $authorPhones);
-            }
-
-            // Remove duplicates
-            $phones = array_unique($phones);
-
-            if (empty($phones)) {
-                Yii::log("No subscribers found for book ID {$book->id} authors, skipping SMS notifications", CLogger::LEVEL_INFO, 'application.controllers.BooksController');
-                return;
-            }
-
-            // Format author names
-            $authorNamesStr = implode(', ', $authorNames);
-
-            // Send notifications via SMS Pilot
-            $result = Yii::app()->smsPilot->sendNewBookNotification(
-                $phones,
-                $book->title,
-                $authorNamesStr,
-                $book->isbn
-            );
-
-            // Log results
-            if ($result['sent'] > 0) {
-                Yii::log("SMS notifications sent for new book '{$book->title}': {$result['sent']} successful, {$result['failed']} failed", 
-                         CLogger::LEVEL_INFO, 'application.controllers.BooksController');
-            }
-            
-            if (!empty($result['errors'])) {
-                foreach ($result['errors'] as $error) {
-                    Yii::log("SMS notification error for phone {$error['phone']}: {$error['error']}", 
-                             CLogger::LEVEL_WARNING, 'application.controllers.BooksController');
-                }
-            }
-
-        } catch (Exception $e) {
-            // Log error but don't interrupt the book creation flow
-            Yii::log("Failed to send SMS notifications for book ID {$book->id}: " . $e->getMessage(), 
-                     CLogger::LEVEL_ERROR, 'application.controllers.BooksController');
         }
     }
 }

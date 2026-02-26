@@ -11,6 +11,7 @@
  * @package BookManagementSystem
  * @subpackage controllers
  */
+Yii::import('application.components.services.AuthorService');
 class AuthorsController extends Controller
 {
     /**
@@ -55,17 +56,8 @@ class AuthorsController extends Controller
      */
     public function actionIndex()
     {
-        $criteria = new CDbCriteria(array(
-            'with' => array('books'),
-            'order' => 't.full_name ASC',
-        ));
-
-        $dataProvider = new CActiveDataProvider('Author', array(
-            'criteria' => $criteria,
-            'pagination' => array(
-                'pageSize' => 50,
-            ),
-        ));
+        $authorService = new AuthorService();
+        $dataProvider = $authorService->searchAuthors();
 
         $this->render('index', array(
             'dataProvider' => $dataProvider,
@@ -79,21 +71,12 @@ class AuthorsController extends Controller
      */
     public function actionView($id)
     {
-        $author = $this->loadModel($id);
+        $authorService = new AuthorService();
+        $result = $authorService->getAuthorWithBooks($id, 10);
 
-        // Get author's books with pagination
-        $booksProvider = new CActiveDataProvider('Book', array(
-            'criteria' => array(
-                'with' => array('authors'),
-                'join' => 'JOIN book_authors ba ON t.id = ba.book_id',
-                'condition' => 'ba.author_id = :authorId',
-                'params' => array(':authorId' => $author->id),
-                'order' => 't.year_published DESC',
-            ),
-            'pagination' => array(
-                'pageSize' => 10,
-            ),
-        ));
+        if ($result['author'] === null) {
+            throw new CHttpException(404, 'The requested author does not exist.');
+        }
 
         // Check if current user is subscribed to this author
         $isSubscribed = false;
@@ -101,14 +84,14 @@ class AuthorsController extends Controller
         if (!Yii::app()->user->isGuest) {
             $subscription = UserSubscription::model()->findByAttributes(array(
                 'user_id' => Yii::app()->user->id,
-                'author_id' => $author->id,
+                'author_id' => $id,
             ));
             $isSubscribed = $subscription !== null;
         }
 
         $this->render('view', array(
-            'author' => $author,
-            'booksProvider' => $booksProvider,
+            'author' => $result['author'],
+            'booksProvider' => $result['booksProvider'],
             'isSubscribed' => $isSubscribed,
             'subscription' => $subscription,
         ));
@@ -127,21 +110,19 @@ class AuthorsController extends Controller
         $author = new Author();
 
         if (isset($_POST['Author'])) {
-            $author->attributes = $_POST['Author'];
+            $authorService = new AuthorService();
+            $result = $authorService->createInlineAuthor($_POST['Author']['full_name']);
             
-            if ($author->save()) {
+            if ($result['success']) {
                 echo CJSON::encode(array(
                     'success' => true,
-                    'author' => array(
-                        'id' => $author->id,
-                        'full_name' => $author->full_name,
-                    ),
+                    'author' => $result['author'],
                 ));
                 Yii::app()->end();
             } else {
                 echo CJSON::encode(array(
                     'success' => false,
-                    'errors' => $author->getErrors(),
+                    'errors' => $result['errors'],
                 ));
                 Yii::app()->end();
             }
